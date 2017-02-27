@@ -1,3 +1,15 @@
+#include <ADC.h>
+#include <ADC_Module.h>
+#include <RingBuffer.h>
+#include <RingBufferDMA.h>
+
+#include <Encoder.h>
+
+#include <OctoWS2811.h>
+
+
+//https://forum.pjrc.com/threads/25395-Teensy-Quick-Reference-Code-Examples-Tips-and-Tricks
+//https://forum.pjrc.com/threads/25532-ADC-library-update-now-with-support-for-Teensy-3-1
 //info: https://github.com/nox771/i2c_t3
 //mpr121 lib https://github.com/sparkfun/MPR121_Capacitive_Touch_Breakout
 
@@ -9,13 +21,35 @@
 char databuf[MEM_LEN];
 int count;
 
+ADC *adc = new ADC();
+
+
+//encoders
+Encoder blueEncoder(0,1);
+
 #define MPR121_IRQ 24
 
 boolean touchStates[12]; //to keep track of the previous touch states
 
+
+//neopixels
+
+const int ledsPerStrip = 2;
+
+DMAMEM int displayMemory[ledsPerStrip*1];
+int drawingMemory[ledsPerStrip*1];
+
+const int config = WS2811_GRB | WS2811_800kHz;
+
+OctoWS2811 leds(ledsPerStrip, displayMemory, drawingMemory, config);
+
+
+
 boolean checkMPR121Interrupt(void){
   return digitalRead(MPR121_IRQ);
 }
+
+
 
 
 void set_register(int address, unsigned char r, unsigned char v){
@@ -26,7 +60,7 @@ void set_register(int address, unsigned char r, unsigned char v){
 }
 
 void mpr121_setup(void){
-
+  
   set_register(0x5A, ELE_CFG, 0x00); 
 
   // Section A - Controls filtering when data is > baseline.
@@ -146,25 +180,65 @@ void readTouchInputs(){
 
 void setup()
 {
-    pinMode(LED_BUILTIN,OUTPUT);    // LED
-    digitalWrite(LED_BUILTIN,LOW);  // LED off
-    pinMode(MPR121_IRQ, INPUT_PULLUP); //IRQ
+
+//  leds.begin();
+//  leds.show();
+  
+    adc->setAveraging(13, ADC_0); // set number of averages
+    adc->setResolution(13, ADC_0); // set bits of resolution
+    adc->setAveraging(13, ADC_1); // set number of averages
+    adc->setResolution(13, ADC_1); // set bits of resolution
+
+    // it can be any of the ADC_CONVERSION_SPEED enum: VERY_LOW_SPEED, LOW_SPEED, MED_SPEED, HIGH_SPEED_16BITS, HIGH_SPEED or VERY_HIGH_SPEED
+    // see the documentation for more information
+    // additionally the conversion speed can also be ADACK_2_4, ADACK_4_0, ADACK_5_2 and ADACK_6_2,
+    // where the numbers are the frequency of the ADC clock in MHz and are independent on the bus speed.
+    adc->setConversionSpeed(ADC_CONVERSION_SPEED::VERY_LOW_SPEED); // change the conversion speed
+    // it can be any of the ADC_MED_SPEED enum: VERY_LOW_SPEED, LOW_SPEED, MED_SPEED, HIGH_SPEED or VERY_HIGH_SPEED
+    adc->setSamplingSpeed(ADC_SAMPLING_SPEED::VERY_LOW_SPEED); // change the sampling speed
+
+    adc->setConversionSpeed(ADC_CONVERSION_SPEED::VERY_LOW_SPEED, ADC_1); // change the conversion speed
+    adc->setSamplingSpeed(ADC_SAMPLING_SPEED::VERY_LOW_SPEED, ADC_1); // change the sampling speed
+
     
+    pinMode(LED_BUILTIN,OUTPUT);    // LED
+    digitalWrite(LED_BUILTIN,HIGH);  // LED on
+    pinMode(MPR121_IRQ, INPUT_PULLUP); //IRQ
+
+    //switches
+    pinMode(27, INPUT_PULLUP);
+    pinMode(28, INPUT_PULLUP);
+    pinMode(29, INPUT_PULLUP);
+    pinMode(30, INPUT_PULLUP);
+
+    pinMode(5, INPUT_PULLUP);
+    pinMode(6, INPUT_PULLUP);
+    pinMode(7, INPUT_PULLUP);
+    pinMode(8, INPUT_PULLUP);
+
+
+    //analogue stuff
     // Setup for Master mode, pins 18/19, external pullups, 400kHz, 200ms default timeout
-    Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_EXT, 400000);
-    Wire.setDefaultTimeout(200000); // 200ms
+//    Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_EXT, 100000);
+//    Wire.setDefaultTimeout(200000); // 200ms
 
     // Data init
-    memset(databuf, 0, sizeof(databuf));
-    count = 0;
+//    memset(databuf, 0, sizeof(databuf));
+//    count = 0;
+//
+//    mpr121_setup();
 
-    mpr121_setup();
-
+    
     Serial.begin(115200);
 }
+  
 
+unsigned int r=100;
+unsigned int gr = 50;
+unsigned int bl = 150;
 
-
+int ledCounter = 0;
+bool ledOn = 1;
 void loop()
 {
 //    uint8_t target = 0x66; // target Slave address
@@ -225,6 +299,98 @@ void loop()
 //        digitalWrite(LED_BUILTIN,LOW);    // LED off
 //        delay(100);                       // Delay to space out tests
 //    }
-  readTouchInputs();
+  //readTouchInputs();
+  //Serial.println(adc->analogRead(A8, ADC_0));
+//  Serial.print(blueEncoder.read());
+//  Serial.print('\t');
+  //Serial.println();
+  
+//  leds.setPixel(0, (r << 16) + (gr << 8) + bl);
+//  r = (r + 1);
+//  gr = (gr + 2);
+//  bl = (bl + 3);
+//  if (r > 255) r -= 255;
+//  if (gr > 255) gr -= 255;
+//  if (bl > 255) bl -= 255;
+//  leds.show();
+
+  //knobs
+  unsigned short blueKnob1 = adc->analogRead(A9, ADC_0);
+  unsigned short blueKnob2 = adc->analogRead(A8, ADC_0);
+  unsigned short blueKnob3 = adc->analogRead(A7, ADC_0);
+  unsigned short blueKnob4 = adc->analogRead(A5, ADC_0);
+  unsigned short blueKnob5 = adc->analogRead(A6, ADC_0);
+  Serial.write(blueKnob1 >> 8);
+  Serial.write(blueKnob1 & 255);
+  Serial.write(blueKnob2 >> 8);
+  Serial.write(blueKnob2 & 255);
+  Serial.write(blueKnob3 >> 8);
+  Serial.write(blueKnob3 & 255);
+  Serial.write(blueKnob4 >> 8);
+  Serial.write(blueKnob4 & 255);
+  Serial.write(blueKnob5 >> 8);
+  Serial.write(blueKnob5 & 255);
+
+  unsigned short redKnob1 = adc->analogRead(A4, ADC_0);
+  unsigned short redKnob2 = adc->analogRead(A3, ADC_0);
+  unsigned short redKnob3 = adc->analogRead(A2, ADC_0);
+  unsigned short redKnob4 = adc->analogRead(A1, ADC_0);
+  unsigned short redKnob5 = adc->analogRead(A0, ADC_0);
+  Serial.write(redKnob1 >> 8);
+  Serial.write(redKnob1 & 255);
+  Serial.write(redKnob2 >> 8);
+  Serial.write(redKnob2 & 255);
+  Serial.write(redKnob3 >> 8);
+  Serial.write(redKnob3 & 255);
+  Serial.write(redKnob4 >> 8);
+  Serial.write(redKnob4 & 255);
+  Serial.write(redKnob5 >> 8);
+  Serial.write(redKnob5 & 255);
+
+  unsigned short yellowKnob1 = adc->analogRead(A13, ADC_1);
+  unsigned short yellowKnob2 = adc->analogRead(A12, ADC_1);
+  unsigned short yellowKnob3 = adc->analogRead(A22, ADC_1);
+  unsigned short yellowKnob4 = adc->analogRead(A21, ADC_0);
+  unsigned short yellowKnob5 = adc->analogRead(A20, ADC_1);
+  Serial.write(yellowKnob1 >> 8);
+  Serial.write(yellowKnob1 & 255);
+  Serial.write(yellowKnob2 >> 8);
+  Serial.write(yellowKnob2 & 255);
+  Serial.write(yellowKnob3 >> 8);
+  Serial.write(yellowKnob3 & 255);
+  Serial.write(yellowKnob4 >> 8);
+  Serial.write(yellowKnob4 & 255);
+  Serial.write(yellowKnob5 >> 8);
+  Serial.write(yellowKnob5 & 255);
+
+  //switches
+  byte switch1 = digitalRead(30);
+  byte switch2 = digitalRead(29);
+  byte switch3 = digitalRead(28);
+  byte switch4 = digitalRead(27);
+  Serial.write(switch1);
+  Serial.write(switch2);
+  Serial.write(switch3);
+  Serial.write(switch4);
+  
+  byte switch5 = digitalRead(5);
+  byte switch6 = digitalRead(6);
+  byte switch7 = digitalRead(7);
+  byte switch8 = digitalRead(8);
+  Serial.write(switch5);
+  Serial.write(switch6);
+  Serial.write(switch7);
+  Serial.write(switch8);
+
+  Serial.write(255);
+  Serial.write(255);
+  
+  digitalWrite(LED_BUILTIN,ledOn);  // LED on
+  ledCounter++;
+  if (ledCounter == 20) {
+    ledOn = !ledOn;
+    ledCounter = 0;
+  }
+  delay(5);
 }
 
