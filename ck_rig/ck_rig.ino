@@ -1,7 +1,7 @@
 #include <ADC.h>
 #include <ADC_Module.h>
-#include <RingBuffer.h>
-#include <RingBufferDMA.h>
+//#include <RingBuffer.h>
+//#include <RingBufferDMA.h>
 
 #include <Encoder.h>
 
@@ -184,21 +184,21 @@ void setup()
 //  leds.begin();
 //  leds.show();
   
-    adc->setAveraging(13, ADC_0); // set number of averages
-    adc->setResolution(13, ADC_0); // set bits of resolution
-    adc->setAveraging(13, ADC_1); // set number of averages
-    adc->setResolution(13, ADC_1); // set bits of resolution
+    adc->adc0->setAveraging(13); // set number of averages
+    adc->adc0->setResolution(13); // set bits of resolution
+    adc->adc1->setAveraging(13); // set number of averages
+    adc->adc1->setResolution(13); // set bits of resolution
 
     // it can be any of the ADC_CONVERSION_SPEED enum: VERY_LOW_SPEED, LOW_SPEED, MED_SPEED, HIGH_SPEED_16BITS, HIGH_SPEED or VERY_HIGH_SPEED
     // see the documentation for more information
     // additionally the conversion speed can also be ADACK_2_4, ADACK_4_0, ADACK_5_2 and ADACK_6_2,
     // where the numbers are the frequency of the ADC clock in MHz and are independent on the bus speed.
-    adc->setConversionSpeed(ADC_CONVERSION_SPEED::VERY_LOW_SPEED); // change the conversion speed
+    adc->adc0->setConversionSpeed(ADC_CONVERSION_SPEED::VERY_LOW_SPEED); // change the conversion speed
     // it can be any of the ADC_MED_SPEED enum: VERY_LOW_SPEED, LOW_SPEED, MED_SPEED, HIGH_SPEED or VERY_HIGH_SPEED
-    adc->setSamplingSpeed(ADC_SAMPLING_SPEED::VERY_LOW_SPEED); // change the sampling speed
+    adc->adc0->setSamplingSpeed(ADC_SAMPLING_SPEED::VERY_LOW_SPEED); // change the sampling speed
 
-    adc->setConversionSpeed(ADC_CONVERSION_SPEED::VERY_LOW_SPEED, ADC_1); // change the conversion speed
-    adc->setSamplingSpeed(ADC_SAMPLING_SPEED::VERY_LOW_SPEED, ADC_1); // change the sampling speed
+    adc->adc1->setConversionSpeed(ADC_CONVERSION_SPEED::VERY_LOW_SPEED); // change the conversion speed
+    adc->adc1->setSamplingSpeed(ADC_SAMPLING_SPEED::VERY_LOW_SPEED); // change the sampling speed
 
     
     pinMode(LED_BUILTIN,OUTPUT);    // LED
@@ -230,6 +230,10 @@ void setup()
 
     
     Serial.begin(115200);
+    while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
+    }
+
 }
   
 
@@ -393,4 +397,3 @@ void loop()
   }
   delay(5);
 }
-
